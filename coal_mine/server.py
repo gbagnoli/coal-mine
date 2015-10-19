@@ -26,6 +26,7 @@ from functools import partial, wraps
 import json
 import logbook
 from coal_mine.mongo_store import MongoStore
+from coal_mine.redis_store import RedisStore
 import os
 import re
 import socket
@@ -58,20 +59,36 @@ def main():  # pragma: no cover
     except:
         logbook.StderrHandler().push_application()
 
+    store = None
     try:
         kwargs = dict(config.items('mongodb'))
+
     except NoSectionError:
-        sys.exit('No "mongodb" section in config file')
-    args = []
-    for arg in ('hosts', 'database', 'username', 'password'):
-        try:
-            args.append(config.get('mongodb', arg))
-        except NoOptionError:
-            sys.exit('No "{}" setting in "mongodb" section of config file'.
-                     format(arg))
-        kwargs.pop(arg)
-    args[0] = [s.strip() for s in args[0].split(',')]
-    store = MongoStore(*args, **kwargs)
+        pass
+
+    else:
+        args = []
+        for arg in ('hosts', 'database', 'username', 'password'):
+            try:
+                args.append(config.get('mongodb', arg))
+            except NoOptionError:
+                sys.exit('No "{}" setting in "mongodb" section of config file'.
+                         format(arg))
+            kwargs.pop(arg)
+        args[0] = [s.strip() for s in args[0].split(',')]
+        store = MongoStore(*args, **kwargs)
+
+    try:
+        kwargs = dict(config.items('redis'))
+
+    except NoSectionError:
+        pass
+
+    else:
+        store = RedisStore(**kwargs)
+
+    if not store:
+        sys.exit('No store configured')
 
     try:
         email_sender = config.get('email', 'sender')
