@@ -95,18 +95,20 @@ class RedisCanary:
         def _save(pipe):
             if pipe.exists(self.key):
                 if create:
-                    raise Exception('slug {} already exists'.format(
-                        canary['slug']))
+                    raise Exception('id {} already exists'.format(self.id))
 
             elif not create:
                 raise KeyError('No such canary {}'.format(self.id))
 
             if create and pipe.hexists(self.store.slugs, canary['slug']):
-                raise Exception('id {} already exists'.format(self.id))
+                raise Exception('slug {} already exists'.format(
+                    canary['slug']))
 
             pipe.multi()
+
             if 'slug' in canary:
                 pipe.hset(self.store.slugs, canary['slug'], self.id)
+
             for key, value in canary.items():
                 if value is None:
                     if key not in ('emails', 'history', 'deadline'):
